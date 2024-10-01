@@ -1,0 +1,173 @@
+﻿@model IEnumerable<Contact_Manager.Models.Contact>
+
+<h2>Contact Manager</h2>
+
+<form method="post" enctype="multipart/form-data" asp-action="Upload">
+    <input type="file" name="csvFile" accept=".csv" />
+    <button type="submit">Upload CSV</button>
+</form>
+
+<table id="contactsTable" class="display">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Date of Birth</th>
+            <th>Married</th>
+            <th>Phone</th>
+            <th>Salary</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var contact in Model)
+        {
+            <tr data-id="@contact.Id">
+                <td contenteditable="true" class="editable" data-field="Name">@contact.Name</td>
+                <td contenteditable="true" class="editable" data-field="DateOfBirth">@contact.DateOfBirth.ToString("dd/MM/yyyy")</td>
+                <td contenteditable="true" class="editable" data-field="Married">@contact.Married</td>
+                <td contenteditable="true" class="editable" data-field="Phone">@contact.Phone</td>
+                <td contenteditable="true" class="editable" data-field="Salary">@contact.Salary</td>
+                <td>
+                    <button class="delete-btn" data-id="@contact.Id">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="pagination-container"></div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        var table = $('#contactsTable').DataTable({
+            paging: true,
+            searching: true,
+            ordering: true,
+            order: [],
+            columnDefs: [
+                {
+                    targets: 1, 
+                    type: 'date',
+                    render: function (data) {
+                        return data;
+                    }
+                }
+            ]
+        });
+
+        // Handle inline editing of contacts
+        $(document).on('blur', '.editable', function () {
+            var id = $(this).closest('tr').data('id');
+            var field = $(this).data('field');
+            var value = $(this).text();
+
+            $.ajax({
+                url: '/Contacts/Update',
+                method: 'POST',
+                data: { id: id, field: field, value: value },
+                success: function () {
+                    showAlert('Contact updated successfully!', 'success', 5000);
+                },
+                error: function () {
+                    showAlert('Error updating contact.', 'error', 5000);
+                }
+            });
+        });
+
+        // Handle deleting a contact
+        $(document).on('click', '.delete-btn', function () {
+            var id = $(this).data('id');
+            var row = $(this).closest('tr');
+
+            if (confirm('Are you sure you want to delete this contact?')) {
+                $.ajax({
+                    url: '/Contacts/Delete',
+                    method: 'POST',
+                    data: { id: id },
+                    success: function () {
+                        showAlert('Contact deleted successfully!', 'success', 5000);
+                        row.fadeOut("slow", function () { $(this).remove(); });
+                    },
+                    error: function () {
+                        showAlert('Error deleting contact.', 'error', 5000);
+                    }
+                });
+            }
+        });
+
+        // Function to show alert messages
+        function showAlert(message, type, duration) {
+            var alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            var alertHtml = `
+                    <div class="alert ${alertClass}">
+                        ${message}
+                        <button class="alert-close">Close</button>
+                    </div>`;
+            $('body').prepend(alertHtml);
+
+            setTimeout(function () {
+                $(".alert").fadeOut("slow");
+            }, duration);
+        }
+
+        // Close alert messages
+        $(document).on('click', '.alert-close', function () {
+            $(this).parent('.alert').fadeOut("slow");
+        });
+    });
+</script>
+
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    th {
+        cursor: pointer;
+    }
+
+    .pagination-container {
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .alert {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        padding: 15px;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .alert-close {
+        margin-left: 15px;
+        background: none;
+        border: none;
+        color: inherit;
+        font-weight: bold;
+        cursor: pointer;
+    }
+</style>
